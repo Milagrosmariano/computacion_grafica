@@ -98,7 +98,7 @@ let tamañoCelda = 100;
 let lastDrawTime = 0;
 let drawDelay = 100;
 let lastSoundDetectionTime = 0;
-let soundDetectionDelay = 200; // Evitar cambios de pincel muy rápido
+let soundDetectionDelay = 20; // Evitar cambios de pincel muy rápido
 
 // Variables para análisis de sonido
 let soundDuration = 0; // Duración del sonido actual
@@ -115,8 +115,8 @@ function preload() {
     pinceles.muchaslineas = loadImage("imagenes/muchaslineas.png");
     pinceles.nose = loadImage("imagenes/nose.png");
     pinceles.splash = loadImage("imagenes/splash.png");
-    pinceles.algo = loadImage("imagenes/algo.png");
-    pinceles.nueva = loadImage("imagenes/nueva.png");
+   
+    
 }
 
 function setup() {
@@ -213,6 +213,8 @@ function detectarSonido() {
             peakFreq = i;
         }
     }
+
+    
     
     // 3. TIMBRE (Spectral distribution - harmonic content)
     // Convertir Hz a índices del espectro
@@ -220,6 +222,8 @@ function detectarSonido() {
     // Cada bin = 22050 / 1024 ≈ 21.5 Hz
     
     let binSize = 22050 / spectrum.length; // Hz por bin
+
+    let peakFreqHz = peakFreq * binSize;
     
     // Calcular índices para cada rango de frecuencia
     let lowStart = Math.floor(30 / binSize);
@@ -275,59 +279,33 @@ function detectarSonido() {
     
     // ===== LÓGICA DE SELECCIÓN DE PINCEL =====
     // Cada pincel corresponde a la banda de frecuencia dominante
-    
-    let selectedBrush = 6;
-    let brushName = "splash";
-    
-    // Encontrar cuál banda de frecuencia tiene mayor energía
-    let maxEnergy = Math.max(lowEnergy, midEnergy, highEnergy, veryHighEnergy);
-    
-    // Pincel 1: Dominante en BAJOS (30-240Hz) - Sonidos graves, bajos profundos
-    if (lowEnergy === maxEnergy && timbralBalance.low > 0.35) {
-        selectedBrush = 1;
-        brushName = "aerosol";
-    }
-    // Pincel 2: Dominante en MEDIOS (241-419Hz) - Voces, tonos medios
-    else if (midEnergy === maxEnergy && timbralBalance.mid > 0.35) {
-        selectedBrush = 2;
-        brushName = "centradas";
-    }
-    // Pincel 3: Dominante en AGUDOS (420-699Hz) - Silbidos, agudos
-    else if (highEnergy === maxEnergy && timbralBalance.high > 0.35) {
-        selectedBrush = 3;
-        brushName = "lineas";
-    }
-    // Pincel 4: Dominante en MUY AGUDOS (700-999Hz) - Gritos, chillidos
-    else if (veryHighEnergy === maxEnergy && timbralBalance.veryHigh > 0.35) {
-        selectedBrush = 4;
-        brushName = "muchaslineas";
-    }
-    // Pincel 5: Sonido balanceado con intensidad alta - Ruido dinámico
-    else if (intensity > 0.6) {
-        selectedBrush = 5;
-        brushName = "nose";
-    }
-    // Pincel 6: Sonido suave - Ruido ambiente bajo
-    else if (intensity < 0.15) {
-        selectedBrush = 6;
-        brushName = "splash";
-    }
-    // Si no entra en ninguna categoría clara, seleccionar por la banda más dominante
-    else {
-        if (timbralBalance.low > timbralBalance.mid && timbralBalance.low > timbralBalance.high && timbralBalance.low > timbralBalance.veryHigh) {
-            selectedBrush = 1;
-            brushName = "aerosol";
-        } else if (timbralBalance.mid > timbralBalance.high && timbralBalance.mid > timbralBalance.veryHigh) {
-            selectedBrush = 2;
-            brushName = "centradas";
-        } else if (timbralBalance.high > timbralBalance.veryHigh) {
-            selectedBrush = 3;
-            brushName = "lineas";
-        } else {
-            selectedBrush = 4;
-            brushName = "muchaslineas";
-        }
-    }
+  
+let brushName = "splash";
+
+// Frecuencia dominante
+if (peakFreqHz >= 30 && peakFreqHz <= 180) {
+    brushName = "aerosol";
+}
+else if (peakFreqHz <= 500) {
+    brushName = "centradas";
+}
+else if (peakFreqHz <= 800) {
+    brushName = "lineas";
+}
+else if (peakFreqHz <= 1200) {
+    brushName = "muchaslineas";
+}
+else {
+    brushName = "nose";
+}
+
+    console.log(
+    "Frecuencia:",
+    Math.round(peakFreqHz),
+    "Hz",
+    "Pincel:",
+    brushName
+);
     
     pincelActual = pinceles[brushName];
     pincelNombre = brushName;
@@ -351,6 +329,11 @@ function draw() {
         return;
     }
     lastDrawTime = currentTime;
+
+    console.log(
+    pincelNombre,
+    usosPinceles[pincelNombre]
+);
 
     // Verificar si este pincel ya llegó al límite de 20 usos
     if (usosPinceles[pincelNombre] >= maximoPorPincel) {
@@ -407,6 +390,7 @@ function draw() {
     usosPinceles[pincelNombre]++;
     mapaZonas[claveZona]++;
     paletaActual[colorNombre].trazosActuales++;
+
 }
 
 function mousePressed() {
